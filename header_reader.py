@@ -14,7 +14,8 @@ def read_chip_number(fits_file_name: str) -> str:
     chip_number = fits_file_name.split('.fits')[0].split('c')[-1]
     return f'c{chip_number}'
 
-def calculate_wcs_matrix(sxz: int, syz: int, xb: int, yb: int, pixscale:float, pa:float, camera_type:str):
+def calculate_wcs_matrix(
+        sxz: int, syz: int, xb: int, yb: int, pixscale:float, pa:float, camera_type:str):
     """Calculates the wcs matrix values depending on camera."""
     if camera_type == 'Long':
         cd1_1 = sxz * xb * pixscale * np.cos(pa)/3600.
@@ -44,7 +45,7 @@ class HeaderInformation:
         self.rotan_d = self.header['ROTANGLE']
         self.ra1 = self.header['RA-D']
         self.dec1 = self.header['DEC-D']
-        
+
         self.xb = int(binning[0])
         self.yb = int(binning[2])
         self.pa = self.north * np.pi/180
@@ -110,8 +111,8 @@ class HeaderInformation:
     @property
     def wcs_matrix(self):
         """Calculates the indicies of the WCS matrix depending on camera."""
-        
-        return calculate_wcs_matrix(self.chip.sxz, self.chip.syz, self.xb, self.yb, c.pixscale, self.pa, self.camera_type)
+        return calculate_wcs_matrix(
+            self.chip.sxz, self.chip.syz, self.xb, self.yb, c.pixscale, self.pa, self.camera_type)
 
     def generate_wcs_object(self):
         """writes the WCS object."""
@@ -133,8 +134,3 @@ class HeaderInformation:
         }
 
         return wcs.WCS(wcs_dict)
-
-if __name__ == '__main__':
-    infile = '/home/tlambert/Desktop/IMACS_analysis/IMACS_RAWDATA/ut211023_24/NON_ROTATED/ift1058c1.fits'
-    header = HeaderInformation(infile)
-    wcs_test = header.generate_wcs_object()
