@@ -3,7 +3,7 @@
 We have written a simple procedure based on the iraf module "iwcs.cl" (included here for reference) to add WCS information into the headers of raw IMACS photometric images. 
 
 ## Warning
-This is a first attempt at doing this and is soley based on the iwcs.cl. No tests have been written and the python code has been written in such a way as to keep with the naming conventions used in the iwcs.cl There may be fringe cases were this method does not work that we are not aware of. If so please let us know. This is also a first attempt at generating a wcs image. It is strongly recommended (you need to do this) to run scamp or some other kind of astrometric correction software. Users have been fairly warned.  
+This is a first attempt at doing this and is soley based on the iwcs.cl. No tests have been written and the python code has been written in such a way as to keep with the naming conventions used in the iwcs.cl. There may be fringe cases were this method does not work that we are not aware of. If so please let us know. This is also a first attempt at generating a wcs image. It is strongly recommended (i.e., you need to do this) to run scamp or some other kind of astrometric correction software. Users have been fairly warned.  
 
 
 ## How to use
