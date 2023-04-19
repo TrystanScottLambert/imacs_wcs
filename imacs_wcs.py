@@ -2,6 +2,7 @@
 
 from astropy.io import fits
 import header_reader
+import glob
 
 def add_wcs_to_fits(fits_file_name: str, outfile_name: str = ''):
     """Writes wcs information to the fits file."""
@@ -14,3 +15,8 @@ def add_wcs_to_fits(fits_file_name: str, outfile_name: str = ''):
     if outfile_name == '':
         outfile_name = fits_file_name.split('.fits')[0] + '.wcs.fits'
     hdu.writeto(outfile_name, overwrite=True)
+
+if __name__ == '__main__':
+    files = glob.glob('/home/tlambert/Downloads/g_band/RAW_SCIENCE/*.fits')
+    for file in files:
+        add_wcs_to_fits(file)

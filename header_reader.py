@@ -95,6 +95,21 @@ class HeaderInformation:
             y0_value = chips[self.chip_number].y0_SITe
         return y0_value
 
+    @property
+    def mscale(self):
+        if self.camera_type == 'Long':
+            value =  66.66667
+        elif self.camera_type == 'Short':
+            value = 67.18
+        return value
+
+    @property
+    def pixscale(self):
+        if self.camera_type == 'Long':
+            value = 0.111
+        elif self.camera_type == 'Short':
+            value = 0.202*66.66667/self.mscale
+        return value
 
     @property
     def corner_pixels(self):
@@ -103,8 +118,8 @@ class HeaderInformation:
         nym = c.ny_num/self.yb
         crp1_big = nxm/2
         crp2_big = nym/2
-        crp1_value = (crp1_big*self.xb-c.offx-self.x0*c.mscale-self.chip.xz)/(self.xb*self.chip.sxz)
-        crp2_value = (crp2_big*self.yb-c.offy-self.y0*c.mscale-self.chip.yz)/(self.yb*self.chip.syz)
+        crp1_value = (crp1_big*self.xb-c.offx-self.x0*self.mscale-self.chip.xz)/(self.xb*self.chip.sxz)
+        crp2_value = (crp2_big*self.yb-c.offy-self.y0*self.mscale-self.chip.yz)/(self.yb*self.chip.syz)
 
         return [crp1_value, crp2_value]
 
@@ -112,7 +127,7 @@ class HeaderInformation:
     def wcs_matrix(self):
         """Calculates the indicies of the WCS matrix depending on camera."""
         return calculate_wcs_matrix(
-            self.chip.sxz, self.chip.syz, self.xb, self.yb, c.pixscale, self.pa, self.camera_type)
+            self.chip.sxz, self.chip.syz, self.xb, self.yb, self.pixscale, self.pa, self.camera_type)
 
     def generate_wcs_object(self):
         """writes the WCS object."""
