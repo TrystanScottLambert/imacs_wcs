@@ -25,15 +25,10 @@ def search_gaia_archives(ra: float, dec: float, height:float, width:float) -> Tu
     return np.array(list(results['ra'])), np.array(list(results['dec']))
 
 
-
 if __name__ == '__main__':
-    INFILE = '/home/tlambert/Downloads/g_band/SCIENCE/scamp_test/iff0166c1.wcs.fits'
-    RA_QSO = 62.54416666666667
-    DEC_QSO = -9.218227777777777
+    INFILE = '/home/tlambert/Downloads/g_band/scamp_test/iff0158c1.wcs.fits'
+    #INFILE = '/home/tlambert/Downloads/g_band/SCIENCE/RAWDATA/iff0158c1.wcs.fits'
 
-
-    RA_T = 62.4992917
-    DEC_T = -9.2689167
     hdul = fits.open(INFILE)
     data = hdul[0].data
     header = hdul[0].header
@@ -42,9 +37,13 @@ if __name__ == '__main__':
     center_y_pix = data.shape[0]/2
     center_x_pix = data.shape[1]/2
 
+    # Assuming square pixels.
+    search_width = data.shape[1] * np.abs(header['PC1_1'])
+    search_height = data.shape[0] * np.abs(header['PC1_1'])
+
     center_ra, center_dec = wcs.pixel_to_world_values(center_x_pix, center_y_pix)
 
-    gaia_ra, gaia_dec = search_gaia_archives(center_ra, center_dec, 0.1, 0.1)
+    gaia_ra, gaia_dec = search_gaia_archives(center_ra, center_dec, width = search_width, height=search_height)
     gaia_x, gaia_y = wcs.world_to_pixel_values(gaia_ra, gaia_dec)
 
     interval = ZScaleInterval()

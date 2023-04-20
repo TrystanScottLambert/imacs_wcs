@@ -5,6 +5,8 @@ Module to read necessary information from the fits header and calculate correct 
 import numpy as np
 from astropy.io import fits
 from astropy import wcs
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 
 from instrument_constants import Constants as c
 from chip import chips
@@ -31,6 +33,18 @@ def calculate_wcs_matrix(
 
     return [cd1_1, cd1_2, cd2_1, cd2_2]
 
+def maintain_north(north_value: float) -> float:
+    """
+    Ensures that the north value is within limits for determining position angle.
+    """
+    if north_value >= 360:
+        north = north_value - 360.
+    elif north_value <= -360:
+        north = north_value + 360
+    else:
+        north = north_value
+    return north
+
 class HeaderInformation:
     """Reads in all appropriate header information."""
     def __init__(self, fits_file_name: str) -> None:
@@ -43,13 +57,34 @@ class HeaderInformation:
         self.camera = self.header['INSTRUME']
         binning = self.header['BINNING']
         self.rotan_d = self.header['ROTANGLE']
-        self.ra1 = self.header['RA-D']
+        self.ra1 = self.header['RA-D'] 
         self.dec1 = self.header['DEC-D']
 
         self.xb = int(binning[0])
         self.yb = int(binning[2])
         self.pa = self.north * np.pi/180
 
+        updated_positons = self.determine_telescope_directional_offsets()
+        self.ra  = updated_positons[0]
+        self.dec = updated_positons[1]
+        print(self.ra, self.dec)
+        print(self.ra1, self.dec1)
+
+
+    def determine_telescope_directional_offsets(self):
+        """
+        Calculates where the actual values of CRVAL1 and CRVAL2 should be 
+        given the position of the telescope: RA-D and DEC-D. 
+        """
+        telescope_positon = SkyCoord(self.ra1 *u.deg, self.dec1 * u.deg, frame='icrs')
+        position_angle = (self.pa + self.chip.pa_offset) * u.rad
+        separation = self.chip.angular_offset
+        updated_pos = telescope_positon.directional_offset_by(position_angle, separation)
+        print(updated_pos)
+        ra = updated_pos.ra.value
+        dec = updated_pos.dec.value
+        return ra, dec
+        
     @property
     def camera_type(self):
         """Determines if the camera is Long or Short."""
@@ -75,7 +110,7 @@ class HeaderInformation:
             north_value = 0.0 - (self.rotan_d - (90.0+c.iroa_d)) + self.dor
         elif self.camera_type == 'Long':
             north_value = 180.0 + (self.rotan_d - (90.0+c.iroa_d)) + self.dor
-        return north_value
+        return maintain_north(north_value)
 
     @property
     def x0(self):
@@ -92,11 +127,12 @@ class HeaderInformation:
         if self.camera_type == 'Long':
             y0_value = chips[self.chip_number].y0_SITe
         elif self.camera_type == 'Short':
-            y0_value = chips[self.chip_number].y0_SITe
+            y0_value = chips[self.chip_number].y0_E2V
         return y0_value
 
     @property
     def mscale(self):
+        """mscale dependent on the camera type"""
         if self.camera_type == 'Long':
             value =  66.66667
         elif self.camera_type == 'Short':
@@ -105,6 +141,7 @@ class HeaderInformation:
 
     @property
     def pixscale(self):
+        "pixscale dependent on the camera type"
         if self.camera_type == 'Long':
             value = 0.111
         elif self.camera_type == 'Short':
