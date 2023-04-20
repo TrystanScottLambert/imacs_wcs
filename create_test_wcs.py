@@ -64,5 +64,3 @@ if __name__ == '__main__':
     STAR_WCS_DIRECTORIES = glob.glob('/home/tlambert/Downloads/g_band/*.txt')
     for file in STAR_WCS_DIRECTORIES:
         apply_wcs(file)
-    
-
