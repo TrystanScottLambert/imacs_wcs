@@ -72,7 +72,6 @@ def cut_star(x_position,y_position,image_data):
         accurate_y_position = y_position_rounded - padding + local_y_position
         return image_postage_stamp, accurate_x_position, accurate_y_position
     except (RuntimeError, ValueError):
-        print('No solution found.')
         return None
 
 
@@ -215,6 +214,10 @@ class ChipImage:
         diff = np.hypot(updated_gaia_x[msk] - accurate_gaia_x, updated_gaia_y[msk] - accurate_gaia_y)
         _, diff_median, diff_std = sigma_clipped_stats(diff)
         cut = np.where(diff < diff_median + 1*diff_std)[0]
+
+        #print('Difference in x: ', np.mean(accurate_gaia_x[cut] - self.current_gaia_x[msk][cut]), np.std(accurate_gaia_x[cut] - self.current_gaia_x[msk][cut]))
+        #print('Difference in y: ', np.mean(accurate_gaia_y[cut] - self.current_gaia_y[msk][cut]), np.std(accurate_gaia_y[cut] - self.current_gaia_y[msk][cut]))
+
         gaia_coords = [(self.gaia_ra[msk][cut][i], self.gaia_dec[msk][cut][i]) for i, _ in enumerate(self.gaia_ra[msk][cut])]
         gaia_skycoords = SkyCoord(gaia_coords, unit=(u.deg, u.deg))
         gaia_pixcoords = np.array([accurate_gaia_x[cut], accurate_gaia_y[cut]])
@@ -238,8 +241,8 @@ class ChipImage:
         self.hdul.writeto(self.file_name.split('.fits')[0] + '.wcs_aligned.fits', overwrite=True)
 
 if __name__ == '__main__':
-    files = glob.glob('/home/tlambert/Downloads/g_band/RAW_SCIENCE/*.wcs.fits')
-    done_files = glob.glob('/home/tlambert/Downloads/g_band/RAW_SCIENCE/*.wcs_aligned*')
+    files = glob.glob('/home/tlambert/Downloads/g_band/RAW_SCIENCE/*c1*.wcs.fits')
+    done_files = glob.glob('/home/tlambert/Downloads/g_band/RAW_SCIENCE/*c1*.wcs_aligned*')
     done_file_originals = [file.replace('.wcs_aligned','') for file in done_files]
     to_be_done_files = np.setdiff1d(files, done_file_originals)
     for file in to_be_done_files:

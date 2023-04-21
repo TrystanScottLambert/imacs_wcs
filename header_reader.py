@@ -67,9 +67,6 @@ class HeaderInformation:
         updated_positons = self.determine_telescope_directional_offsets()
         self.ra  = updated_positons[0]
         self.dec = updated_positons[1]
-        print(self.ra, self.dec)
-        print(self.ra1, self.dec1)
-
 
     def determine_telescope_directional_offsets(self):
         """
@@ -80,7 +77,6 @@ class HeaderInformation:
         position_angle = (self.pa + self.chip.pa_offset) * u.rad
         separation = self.chip.angular_offset
         updated_pos = telescope_positon.directional_offset_by(position_angle, separation)
-        print(updated_pos)
         ra = updated_pos.ra.value
         dec = updated_pos.dec.value
         return ra, dec
