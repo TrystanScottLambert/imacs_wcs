@@ -179,6 +179,8 @@ class ChipImage:
         self.gaia_dec = current_gaia_info[1]
         self.current_gaia_x = current_gaia_info[2]
         self.current_gaia_y = current_gaia_info[3]
+        interval = ZScaleInterval()
+        self.vmin, self.vmax = interval.get_limits(self.data)
     
     def query_gaia(self):
         """Gets the gaia positions in the chip frame."""
@@ -195,29 +197,49 @@ class ChipImage:
 
         return gaia_ra, gaia_dec, gaia_x, gaia_y
     
-    def manually_determine_wcs_with_gaia(self, show_alignment=False):
-        """Starts the draggable plot for alignment."""
-
-        interval = ZScaleInterval()
-        vmin, vmax = interval.get_limits(self.data)
+    def _manually_determine_gaia_offsets(self):
+        """
+        Starts the draggable plot for alignment. And uses user input to determine the pixel offsets of 
+        the GAIA stars.
+        """
 
         fig = plt.figure()
         ax = fig.add_subplot(projection=self.current_wcs)
         ax.set_title(self.file_name)
-        ax.imshow(self.data, vmin=vmin, vmax=vmax, cmap='gray')
+        ax.imshow(self.data, vmin=self.vmin, vmax=self.vmax, cmap='gray')
         scatter = ax.scatter(
             self.current_gaia_x, self.current_gaia_y, facecolor='None', edgecolor='r', marker='s', s=80, picker=True)
         DraggableScatter(scatter)
         plt.show()
-
         updated_gaia_x, updated_gaia_y = scatter.get_offsets().T
+        offset_x = updated_gaia_x - self.current_gaia_x
+        offset_y = updated_gaia_y - self.current_gaia_y
+        return offset_x, offset_y
+
+    def determine_wcs_with_gaia(self, manual=True, x_pix_offset=None, y_pix_offset=None, show_alignment=False):
+        """
+        If manual is True then the wcs will be determined by using the Dragable scatter plot.
+        if x_pix and y_pix offsets are given then these will first be used as a guess for automatic 
+        determination. If this fails then the Draggable scatter plot will need to be used. 
+        """
+        if manual:
+            gaia_offset_x, gaia_offset_y = self._manually_determine_gaia_offsets() # starts interactive plot
+
+        elif manual is False and x_pix_offset is not None and y_pix_offset is not None:
+            gaia_offset_x, gaia_offset_y = x_pix_offset, y_pix_offset
+        else:
+            raise ValueError('Manual needs to be a boolean or x_pix_offset AND y_pix_offset need to be given.')
+
+        updated_gaia_x = self.current_gaia_x + gaia_offset_x
+        updated_gaia_y = self.current_gaia_y + gaia_offset_y
         accurate_gaia_x, accurate_gaia_y, msk = get_usable_gaia(updated_gaia_x, updated_gaia_y, self.data)
+
         diff = np.hypot(updated_gaia_x[msk] - accurate_gaia_x, updated_gaia_y[msk] - accurate_gaia_y)
         _, diff_median, diff_std = sigma_clipped_stats(diff)
         cut = np.where(diff < diff_median + 1*diff_std)[0]
 
-        #print('Difference in x: ', np.mean(accurate_gaia_x[cut] - self.current_gaia_x[msk][cut]), np.std(accurate_gaia_x[cut] - self.current_gaia_x[msk][cut]))
-        #print('Difference in y: ', np.mean(accurate_gaia_y[cut] - self.current_gaia_y[msk][cut]), np.std(accurate_gaia_y[cut] - self.current_gaia_y[msk][cut]))
+        self.gaia_offset_x = np.mean(accurate_gaia_x[cut] - self.current_gaia_x[msk][cut])
+        self.gaia_offset_y = np.mean(accurate_gaia_y[cut] - self.current_gaia_y[msk][cut])
 
         gaia_coords = [(self.gaia_ra[msk][cut][i], self.gaia_dec[msk][cut][i]) for i, _ in enumerate(self.gaia_ra[msk][cut])]
         gaia_skycoords = SkyCoord(gaia_coords, unit=(u.deg, u.deg))
@@ -229,16 +251,17 @@ class ChipImage:
 
             fig = plt.figure()
             ax = fig.add_subplot(projection=self.current_wcs)
-            ax.imshow(self.data, vmin=vmin, vmax=vmax, cmap='gray')
+            ax.imshow(self.data, vmin=self.vmin, vmax=self.vmax, cmap='gray')
             ax.scatter(accurate_gaia_x[cut], accurate_gaia_y[cut], facecolor='None', edgecolor='r', marker='s', s=100, picker=True)
             plt.show()
 
         return wcs
 
-    def manually_update_wcs_with_gaia(self, show_alignment=False):
-        """Aligns the image with gaia and determines accurate WCS information."""
-        wcs = self.manually_determine_wcs_with_gaia(show_alignment)
-        self.hdul[0].header.update(wcs.to_header())
+    def update_wcs(self, wcs_object: WCS) -> None:
+        """
+        Updates the chip with the given wcs object.
+        """
+        self.hdul[0].header.update(wcs_object.to_header())
         self.hdul.writeto(self.file_name.split('.fits')[0] + '.wcs_aligned.fits', overwrite=True)
 
 if __name__ == '__main__':
@@ -248,4 +271,5 @@ if __name__ == '__main__':
     to_be_done_files = np.setdiff1d(files, done_file_originals)
     for file in to_be_done_files:
         chip = ChipImage(file)
-        chip.manually_update_wcs_with_gaia()
+        updated_wcs = chip.determine_wcs_with_gaia()
+        chip.update_wcs(updated_wcs)
