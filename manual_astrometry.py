@@ -76,7 +76,7 @@ def cut_star(x_position,y_position,image_data):
 
 
 class DraggableScatter():
-
+    """Class for a scatter plot that the user can drag with the mouse."""
     epsilon = 5
 
     def __init__(self, scatter):
@@ -120,7 +120,7 @@ class DraggableScatter():
         if event.button != 1:
             return
         self._ind = None
-        
+
         xy = np.asarray(self.scatter.get_offsets())
         x_offset = event.xdata - self.x_ref
         y_offset = event.ydata - self.y_ref
@@ -155,7 +155,7 @@ def get_usable_gaia(gaia_x_array: np.ndarray, gaia_y_array: np.ndarray, image: n
     indicies = []
     for i, _ in enumerate(gaia_x_array):
         star_cutout = cut_star(gaia_x_array[i], gaia_y_array[i], image)
-        if star_cutout is not None:    
+        if star_cutout is not None:
             _, x_point, y_point = star_cutout
             accurate_x.append(x_point)
             accurate_y.append(y_point)
@@ -203,6 +203,7 @@ class ChipImage:
 
         fig = plt.figure()
         ax = fig.add_subplot(projection=self.current_wcs)
+        ax.set_title(self.file_name)
         ax.imshow(self.data, vmin=vmin, vmax=vmax, cmap='gray')
         scatter = ax.scatter(
             self.current_gaia_x, self.current_gaia_y, facecolor='None', edgecolor='r', marker='s', s=80, picker=True)
@@ -241,8 +242,8 @@ class ChipImage:
         self.hdul.writeto(self.file_name.split('.fits')[0] + '.wcs_aligned.fits', overwrite=True)
 
 if __name__ == '__main__':
-    files = glob.glob('/home/tlambert/Downloads/g_band/RAW_SCIENCE/*c1*.wcs.fits')
-    done_files = glob.glob('/home/tlambert/Downloads/g_band/RAW_SCIENCE/*c1*.wcs_aligned*')
+    files = glob.glob('/home/tlambert/Downloads/g_band/SCIENCE/*wcs.fits')
+    done_files = glob.glob('/home/tlambert/Downloads/g_band/SCIENCE/*.wcs_aligned*')
     done_file_originals = [file.replace('.wcs_aligned','') for file in done_files]
     to_be_done_files = np.setdiff1d(files, done_file_originals)
     for file in to_be_done_files:
