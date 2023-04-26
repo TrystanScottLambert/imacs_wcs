@@ -8,8 +8,6 @@ a good match, manual correction will be required and the process continues.
 
 import glob
 import numpy as np
-from astropy.io import fits
-from astropy.wcs import WCS
 from manual_astrometry import ChipImage
 
 def set_up_files(directory: str, chip_number: int) -> tuple[str,list[str]]:
@@ -23,9 +21,19 @@ def set_up_files(directory: str, chip_number: int) -> tuple[str,list[str]]:
 
 if __name__ == '__main__':
     DIRECTORY = '/home/tlambert/Downloads/g_band/SCIENCE/'
-    chip1 = ChipImage(f'{DIRECTORY}iff0158c1.wcs.fits')
+    files = np.sort(glob.glob(f'{DIRECTORY}iff*c1*.wcs.fits'))
+    done_files = np.sort(glob.glob(f'{DIRECTORY}iff*c1*.wcs.wcs_aligned.fits'))
+    done_files = [done_file.replace('wcs_aligned.','') for done_file in done_files]
+
+    to_do_files = np.setdiff1d(files, done_files)
+
+    chip1 = ChipImage(to_do_files[0])
     wcs = chip1.determine_wcs_with_gaia()
+    offset_x, offset_y = chip1.gaia_offset_x, chip1.gaia_offset_y
     chip1.update_wcs(wcs)
 
-    chip2 = ChipImage(f'{DIRECTORY}iff0159c1.wcs.fits')
-    chip2.determine_wcs_with_gaia(manual=False, x_pix_offset=chip1.gaia_offset_x, y_pix_offset=chip1.gaia_offset_y, show_alignment=True)
+    for file in to_do_files[1:]:
+        chip2 = ChipImage(file)
+        chip2.determine_wcs_with_gaia(manual=False, x_pix_offset = offset_x, y_pix_offset = offset_y, show_alignment=True)
+        offset_x = chip2.gaia_offset_x
+        offset_y = chip2.gaia_offset_y

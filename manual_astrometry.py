@@ -47,12 +47,13 @@ def gauss_fit(x_array: np.ndarray, y_array:np.ndarray) -> np.ndarray:
     popt, _ = curve_fit(gauss, x_array, y_array, p0=[np.min(y_array), np.max(y_array), mean, sigma])
     return popt
 
-def get_star_position(star):
+def get_star_position(star: np.ndarray):
     """Determines the two 1-d gaussian fit positoin of the cut out star."""
     column_sum, row_sum = sum_columns_and_rows(star)
     x_values = np.arange(len(row_sum))
     row_popt = gauss_fit(x_values,row_sum)
     column_popt = gauss_fit(x_values,column_sum)
+
     return column_popt[2], row_popt[2]
 
 def cut_star(x_position,y_position,image_data):
@@ -71,7 +72,7 @@ def cut_star(x_position,y_position,image_data):
         accurate_x_position = x_position_rounded - padding + local_x_position
         accurate_y_position = y_position_rounded - padding + local_y_position
         return image_postage_stamp, accurate_x_position, accurate_y_position
-    except (RuntimeError, ValueError):
+    except (RuntimeError, ValueError, TypeError):
         return None
 
 
@@ -251,6 +252,7 @@ class ChipImage:
 
             fig = plt.figure()
             ax = fig.add_subplot(projection=self.current_wcs)
+            ax.set_title(self.file_name)
             ax.imshow(self.data, vmin=self.vmin, vmax=self.vmax, cmap='gray')
             ax.scatter(accurate_gaia_x[cut], accurate_gaia_y[cut], facecolor='None', edgecolor='r', marker='s', s=100, picker=True)
             plt.show()
