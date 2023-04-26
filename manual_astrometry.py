@@ -12,10 +12,31 @@ from astropy.visualization import ZScaleInterval
 from astropy.coordinates import SkyCoord
 from astropy.stats import sigma_clipped_stats
 from astropy.wcs import utils
+from photutils.detection import DAOStarFinder
 import astropy.units as u
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from astroquery.gaia import Gaia
+
+
+def are_points_aligned(data: np.ndarray, x_array: np.array, y_array: np.ndarray) -> bool:
+    """
+    Tries to find a source in every cut out image. If less than 70% of the cutouts are determined to
+    not have sources then the test is a fail.
+    """
+    counter = 0
+    for i, _ in enumerate(x_array):
+        image = cut_star(x_array[i], y_array[i], data)
+        if image is not None:
+            image = image[0]
+            _, median, std = sigma_clipped_stats(image, sigma=3)
+            daofind=DAOStarFinder(fwhm=3.0, threshold=5*std)
+            sources = daofind(image - median)
+            if sources is None:
+                counter += 1
+        else:
+            counter += 1
+    return counter/len(x_array) < 0.7
 
 
 def search_gaia_archives(
@@ -217,20 +238,50 @@ class ChipImage:
         offset_y = updated_gaia_y - self.current_gaia_y
         return offset_x, offset_y
 
-    def determine_wcs_with_gaia(self, manual=True, x_pix_offset=None, y_pix_offset=None, show_alignment=False):
+    def determine_wcs_manually(self, show_alignment: bool = False) -> WCS:
         """
-        If manual is True then the wcs will be determined by using the Dragable scatter plot.
-        if x_pix and y_pix offsets are given then these will first be used as a guess for automatic 
-        determination. If this fails then the Draggable scatter plot will need to be used. 
+        Using draggabale scatter plot to determine the x,y offsets.
         """
-        if manual:
-            gaia_offset_x, gaia_offset_y = self._manually_determine_gaia_offsets() # starts interactive plot
+        gaia_offset_x, gaia_offset_y = self._manually_determine_gaia_offsets() # starts interactive plot
+        updated_gaia_x = self.current_gaia_x + gaia_offset_x
+        updated_gaia_y = self.current_gaia_y + gaia_offset_y
+        accurate_gaia_x, accurate_gaia_y, msk = get_usable_gaia(updated_gaia_x, updated_gaia_y, self.data)
 
-        elif manual is False and x_pix_offset is not None and y_pix_offset is not None:
-            gaia_offset_x, gaia_offset_y = x_pix_offset, y_pix_offset
-        else:
-            raise ValueError('Manual needs to be a boolean or x_pix_offset AND y_pix_offset need to be given.')
+        diff = np.hypot(updated_gaia_x[msk] - accurate_gaia_x, updated_gaia_y[msk] - accurate_gaia_y)
+        _, diff_median, diff_std = sigma_clipped_stats(diff)
+        cut = np.where(diff < diff_median + 1*diff_std)[0]
 
+        self.gaia_offset_x = np.mean(accurate_gaia_x[cut] - self.current_gaia_x[msk][cut])
+        self.gaia_offset_y = np.mean(accurate_gaia_y[cut] - self.current_gaia_y[msk][cut])
+
+
+
+        gaia_coords = [(self.gaia_ra[msk][cut][i], self.gaia_dec[msk][cut][i]) for i, _ in enumerate(self.gaia_ra[msk][cut])]
+        gaia_skycoords = SkyCoord(gaia_coords, unit=(u.deg, u.deg))
+        gaia_pixcoords = np.array([accurate_gaia_x[cut], accurate_gaia_y[cut]])
+
+        wcs = utils.fit_wcs_from_points(gaia_pixcoords, gaia_skycoords)
+
+        if show_alignment:
+
+            fig = plt.figure()
+            ax = fig.add_subplot(projection=self.current_wcs)
+            ax.set_title(self.file_name)
+            ax.imshow(self.data, vmin=self.vmin, vmax=self.vmax, cmap='gray')
+            ax.scatter(accurate_gaia_x[cut], accurate_gaia_y[cut], facecolor='None', edgecolor='r', marker='s', s=100, picker=True)
+            plt.show()
+
+        return wcs
+
+    
+    def determine_wcs_with_offsets(
+            self, x_pix_offset: np.ndarray, y_pix_offset: np.ndarray,
+            show_alignment: bool = False) -> WCS:
+        """
+        Using a set of offsets to try fit the data. 
+        If these offset fail then manual wcs will be needed.
+        """
+        gaia_offset_x, gaia_offset_y = x_pix_offset, y_pix_offset
         updated_gaia_x = self.current_gaia_x + gaia_offset_x
         updated_gaia_y = self.current_gaia_y + gaia_offset_y
         accurate_gaia_x, accurate_gaia_y, msk = get_usable_gaia(updated_gaia_x, updated_gaia_y, self.data)
@@ -246,8 +297,12 @@ class ChipImage:
         gaia_skycoords = SkyCoord(gaia_coords, unit=(u.deg, u.deg))
         gaia_pixcoords = np.array([accurate_gaia_x[cut], accurate_gaia_y[cut]])
 
-        wcs = utils.fit_wcs_from_points(gaia_pixcoords, gaia_skycoords)
-
+        if are_points_aligned(self.data, gaia_pixcoords[0], gaia_pixcoords[1]):
+            wcs = utils.fit_wcs_from_points(gaia_pixcoords, gaia_skycoords)
+        else:
+            print('Offsets failed to fit. Manual intervention required.')
+            wcs = self.determine_wcs_manually()
+            
         if show_alignment:
 
             fig = plt.figure()
@@ -267,6 +322,7 @@ class ChipImage:
         self.hdul.writeto(self.file_name.split('.fits')[0] + '.wcs_aligned.fits', overwrite=True)
 
 if __name__ == '__main__':
+
     files = glob.glob('/home/tlambert/Downloads/g_band/SCIENCE/*wcs.fits')
     done_files = glob.glob('/home/tlambert/Downloads/g_band/SCIENCE/*.wcs_aligned*')
     done_file_originals = [file.replace('.wcs_aligned','') for file in done_files]

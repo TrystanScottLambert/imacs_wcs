@@ -21,19 +21,20 @@ def set_up_files(directory: str, chip_number: int) -> tuple[str,list[str]]:
 
 if __name__ == '__main__':
     DIRECTORY = '/home/tlambert/Downloads/g_band/SCIENCE/'
-    files = np.sort(glob.glob(f'{DIRECTORY}iff*c1*.wcs.fits'))
-    done_files = np.sort(glob.glob(f'{DIRECTORY}iff*c1*.wcs.wcs_aligned.fits'))
+    files = np.sort(glob.glob(f'{DIRECTORY}iff*c2*.wcs.fits'))
+    done_files = np.sort(glob.glob(f'{DIRECTORY}iff*c2*.wcs.wcs_aligned.fits'))
     done_files = [done_file.replace('wcs_aligned.','') for done_file in done_files]
 
     to_do_files = np.setdiff1d(files, done_files)
 
     chip1 = ChipImage(to_do_files[0])
-    wcs = chip1.determine_wcs_with_gaia()
+    wcs = chip1.determine_wcs_manually()
     offset_x, offset_y = chip1.gaia_offset_x, chip1.gaia_offset_y
     chip1.update_wcs(wcs)
 
     for file in to_do_files[1:]:
         chip2 = ChipImage(file)
-        chip2.determine_wcs_with_gaia(manual=False, x_pix_offset = offset_x, y_pix_offset = offset_y, show_alignment=True)
+        wcs = chip2.determine_wcs_with_offsets(x_pix_offset = offset_x, y_pix_offset = offset_y)
+        chip2.update_wcs(wcs)
         offset_x = chip2.gaia_offset_x
         offset_y = chip2.gaia_offset_y
