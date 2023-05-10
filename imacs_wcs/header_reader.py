@@ -2,16 +2,14 @@
 Module to read necessary information from the fits header and calculate correct values.
 """
 
-import sys
 import numpy as np
 from astropy.io import fits
 from astropy import wcs
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 
-sys.path.append('./')
-from instrument_constants import Constants as c
-from chip import chips
+from .instrument_constants import Constants as c
+from .chip import chips
 
 def read_chip_number(fits_file_name: str) -> str:
     """Finds the chip number from the raw imacs file name."""

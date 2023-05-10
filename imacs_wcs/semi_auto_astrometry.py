@@ -6,12 +6,10 @@ chips will then be automatically matched with gaia stars. If at some point there
 a good match, manual correction will be required and the process continues.
 """
 
-import sys
 import glob
 import numpy as np
 
-sys.path.append('./')
-from manual_astrometry import ChipImage
+from .manual_astrometry import ChipImage
 
 
 def do_semi_automation_for_chip(directory: str, chip_number: int) -> None:
