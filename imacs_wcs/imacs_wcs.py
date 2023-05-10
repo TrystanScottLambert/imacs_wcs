@@ -1,7 +1,10 @@
 """Module to update a raw IMACS fits file with wcs information."""
 
+import sys
 import glob
 from astropy.io import fits
+
+sys.path.append('./')
 import header_reader
 
 def add_wcs_to_fits(fits_file_name: str, outfile_name: str = ''):
