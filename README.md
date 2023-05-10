@@ -7,7 +7,10 @@ This is a first attempt at doing this and is soley based on the iwcs.cl. No test
 
 
 ## Installation
+
+```python
 pip install imacs_wcs
+```
 
 ## Making rough wcs correction
 First correct the imacs images using the routine defined in iwcs.cl. Note that the module has been written for IMACS naming conventions (e.g. ift1111c1.fits).
@@ -40,6 +43,7 @@ semi.do_semi_automation_for_chip(directory)
 semi.do_semi_automation_of_every_chip(directory)
 ```
 
+The user will be promted if the program cannot automatically fit a solution. If, for some reason, the process if interrupted it can be run again because the alignment will only run on images which haven't already been aligned.
 
  ## Future
  
