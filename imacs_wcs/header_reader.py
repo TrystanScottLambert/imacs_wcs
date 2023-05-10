@@ -64,23 +64,6 @@ class HeaderInformation:
         self.yb = int(binning[2])
         self.pa = self.north * np.pi/180
 
-        updated_positons = self.determine_telescope_directional_offsets()
-        self.ra  = updated_positons[0]
-        self.dec = updated_positons[1]
-
-    def determine_telescope_directional_offsets(self):
-        """
-        Calculates where the actual values of CRVAL1 and CRVAL2 should be 
-        given the position of the telescope: RA-D and DEC-D. 
-        """
-        telescope_positon = SkyCoord(self.ra1 *u.deg, self.dec1 * u.deg, frame='icrs')
-        position_angle = (self.pa + self.chip.pa_offset) * u.rad
-        separation = self.chip.angular_offset
-        updated_pos = telescope_positon.directional_offset_by(position_angle, separation)
-        ra = updated_pos.ra.value
-        dec = updated_pos.dec.value
-        return ra, dec
-        
     @property
     def camera_type(self):
         """Determines if the camera is Long or Short."""

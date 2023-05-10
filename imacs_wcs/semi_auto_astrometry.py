@@ -53,6 +53,6 @@ def do_semi_automation_of_every_chip(directory: str) -> None:
         do_semi_automation_for_chip(directory, chip_number)
 
 if __name__ == '__main__':
-    DIRECTORY = '/home/tlambert/Downloads/g_band/SCIENCE/'
+    DIRECTORY = '../SCIENCE/'
     do_semi_automation_for_chip(DIRECTORY, 4)
     do_semi_automation_of_every_chip(DIRECTORY)
