@@ -3,7 +3,7 @@ Draggable scatter plot which is used for gaia points with images.
 """
 
 import numpy as np
-import pylab as plt
+import matplotlib.pyplot as plt
 
 class DraggableScatter():
     """Class for a scatter plot that the user can drag with the mouse."""
