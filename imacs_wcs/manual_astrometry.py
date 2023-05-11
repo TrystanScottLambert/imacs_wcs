@@ -145,12 +145,11 @@ class ChipImage:
 
         # Assuming square pixels.
         if np.abs(self.header['PC1_1']) >= np.abs(self.header['PC1_2']):
-            keyword = 'PC1_1'
+            search_width = self.data.shape[1] * np.abs(self.header['PC1_1'])
+            search_height = self.data.shape[0] * np.abs(self.header['PC1_1'])
         else:
-            keyword = 'PC1_2'
-
-        search_width = self.data.shape[1] * np.abs(self.header[keyword])
-        search_height = self.data.shape[0] * np.abs(self.header[keyword])
+            search_height = self.data.shape[1] * np.abs(self.header['PC1_2'])
+            search_width = self.data.shape[0] * np.abs(self.header['PC1_2'])
 
         center_ra, center_dec = self.current_wcs.pixel_to_world_values(center_x_pix, center_y_pix)
         gaia_ra, gaia_dec = search_gaia_archives(
