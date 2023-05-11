@@ -144,8 +144,13 @@ class ChipImage:
         center_x_pix = self.data.shape[1]/2
 
         # Assuming square pixels.
-        search_width = self.data.shape[1] * np.abs(self.header['PC1_1'])
-        search_height = self.data.shape[0] * np.abs(self.header['PC1_1'])
+        if np.abs(self.header['PC1_1']) >= np.abs(self.header['PC1_2']):
+            keyword = 'PC1_1'
+        else:
+            keyword = 'PC1_2'
+
+        search_width = self.data.shape[1] * np.abs(self.header[keyword])
+        search_height = self.data.shape[0] * np.abs(self.header[keyword])
 
         center_ra, center_dec = self.current_wcs.pixel_to_world_values(center_x_pix, center_y_pix)
         gaia_ra, gaia_dec = search_gaia_archives(
@@ -254,8 +259,8 @@ class ChipImage:
 
 if __name__ == '__main__':
 
-    files = glob.glob('/home/tlambert/Downloads/g_band/SCIENCE/*wcs.fits')
-    done_files = glob.glob('/home/tlambert/Downloads/g_band/SCIENCE/*.wcs_aligned*')
+    files = glob.glob('../SCIENCE/*wcs.fits')
+    done_files = glob.glob('../SCIENCE/*.wcs_aligned*')
     done_file_originals = [file.replace('.wcs_aligned','') for file in done_files]
     to_be_done_files = np.setdiff1d(files, done_file_originals)
     for file in to_be_done_files:
