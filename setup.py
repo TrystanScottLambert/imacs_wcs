@@ -3,13 +3,13 @@ from distutils.core import setup
 setup(
   name = 'imacs_wcs',
   packages = ['imacs_wcs'],
-  version = '0.0.4',
+  version = '0.0.5',
   license='MIT',
   description = 'Library for determining and writing wcs information for IMACS images.',
   author = 'Trystan Scott Lambert',
   author_email = 'trystanscottlambert@gmail.com',
   url = 'https://github.com/TrystanScottLambert',
-  download_url = 'https://github.com/TrystanScottLambert/imacs_wcs/archive/refs/tags/v0.0.4.tar.gz',
+  download_url = 'https://github.com/TrystanScottLambert/imacs_wcs/archive/refs/tags/v0.0.5.tar.gz',
   keywords = ['astronomy', 'wcs', 'imacs'],
   install_requires=[
     'numpy',
