@@ -37,7 +37,7 @@ import imacs_wcs.semi_auto_astrometry as semi
 directory = 'science/'
 
 # for a single chip number (if you want to)
-semi.do_semi_automation_for_chip(directory)
+semi.do_semi_automation_for_chip(directory, 4)
 
 # for every chip in a directory (reccomended)
 semi.do_semi_automation_of_every_chip(directory)
