@@ -12,7 +12,7 @@ from astropy.stats import sigma_clipped_stats
 from astropy.visualization import ZScaleInterval
 from photutils.detection import DAOStarFinder
 
-from .manual_astrometry import ChipImage
+from manual_astrometry import ChipImage
 
 class RefinedAlignment(ChipImage):
     """
@@ -64,7 +64,7 @@ class RefinedAlignment(ChipImage):
         """
         wcs = self.calcualte_aligned_wcs()
         self.hdul[0].header.update(wcs.to_header())
-        self.hdul.writeto(self.file_name, overwrite=True)
+        self.hdul.writeto(self.file_name.split('.fits')[0] + '.refined.fits', overwrite=True)
 
     def _show_matches(self) -> None:
         """

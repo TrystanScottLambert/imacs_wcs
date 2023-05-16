@@ -8,8 +8,8 @@ from astropy import wcs
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 
-from .instrument_constants import Constants as c
-from .chip import chips
+from instrument_constants import Constants as c
+from chip import chips
 
 def read_chip_number(fits_file_name: str) -> str:
     """Finds the chip number from the raw imacs file name."""

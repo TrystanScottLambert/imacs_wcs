@@ -3,7 +3,7 @@
 import glob
 from astropy.io import fits
 
-from .header_reader import HeaderInformation
+from header_reader import HeaderInformation
 
 def add_wcs_to_fits(fits_file_name: str, outfile_name: str = ''):
     """Writes wcs information to the fits file."""

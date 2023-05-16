@@ -7,9 +7,10 @@ a good match, manual correction will be required and the process continues.
 """
 
 import glob
+from rich.progress import track
 import numpy as np
 
-from .manual_astrometry import ChipImage
+from manual_astrometry import ChipImage
 
 
 def do_semi_automation_for_chip(directory: str, chip_number: int) -> None:
@@ -37,7 +38,7 @@ def do_semi_automation_for_chip(directory: str, chip_number: int) -> None:
     offset_x, offset_y = chip1.gaia_offset_x, chip1.gaia_offset_y
     chip1.update_wcs(wcs)
 
-    for file in to_do_files[1:]:
+    for file in track(to_do_files[1:], description=f'Semi-auto aligning chip number {chip_number}'):
         chip2 = ChipImage(file)
         wcs = chip2.determine_wcs_with_offsets(x_pix_offset = offset_x, y_pix_offset = offset_y)
         chip2.update_wcs(wcs)

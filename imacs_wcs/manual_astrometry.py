@@ -18,7 +18,7 @@ from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from astroquery.gaia import Gaia
 
-from .draggable_scatter import DraggableScatter
+from draggable_scatter import DraggableScatter
 
 
 def are_points_aligned(data: np.ndarray, x_array: np.array, y_array: np.ndarray) -> bool:
