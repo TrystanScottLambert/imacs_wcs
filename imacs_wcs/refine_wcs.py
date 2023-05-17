@@ -3,6 +3,7 @@ Does a final refinement based on cross matching.
 """
 
 import glob
+import keyring
 from rich.progress import track
 import numpy as np
 import astropy.units as u
@@ -21,6 +22,10 @@ class RefinedAlignment(ChipImage):
     """
     Performs cross matching to refine the wcs alignment with gaia.
     """
+    def __init__(self, file_name):
+        super().__init__(file_name)
+        self.wcs = WCS(self.header)
+        self.ra, self.dec = self.wcs.pixel_to_world_values(self.data.shape[1]/2, self.data.shape[0]/2)
 
     def find_stars(self, fwhm: float = 3.0, sigma: float = 5.0) -> Table:
         """
@@ -44,23 +49,16 @@ class RefinedAlignment(ChipImage):
         x_pos, y_pos = np.array(sources['xcentroid']), np.array(sources['ycentroid'])
         return x_pos, y_pos
 
-    def match_to_astrometry(
-            self, api_key: str, fwhm: float = 3.0, sigma: float = 5.0) -> fits.Header:
+    def match_to_astrometry(self) -> fits.Header:
         """
         Uploads the catalog of detected stars to astrometry.net to determine wcs
         """
         ast = AstrometryNet()
-        ast.api_key = api_key
-        sources = self.find_stars(fwhm, sigma)
-        sources.sort('flux')
-        sources.reverse()
-        image_width = self.data.shape[1]
-        image_height = self.data.shape[0]
-        wcs_header = ast.solve_from_source_list(sources['xcentroid'], sources['ycentroid'],
-                                        image_width, image_height,
-                                        solve_timeout=300)
+        ast.api_key = keyring.get_password('astroquery:astrometry_net', 'IMACS')
+        wcs_header = ast.solve_from_image(
+            self.file_name, force_image_upload=True, solve_timeout=900,
+            center_ra = float(self.ra), center_dec = float(self.dec), radius = 0.8)
         return wcs_header
-
 
     def match_to_gaia(self) -> tuple[np.array, SkyCoord]:
         """
@@ -68,7 +66,7 @@ class RefinedAlignment(ChipImage):
         of the image and the sky values of gaia.
         """
         x_image, y_image = self.get_star_positions()
-        image_ra, image_dec = WCS(self.header).pixel_to_world_values(x_image, y_image)
+        image_ra, image_dec = self.wcs.pixel_to_world_values(x_image, y_image)
         c_image = SkyCoord(ra = image_ra * u.deg, dec = image_dec * u.deg)
         c_gaia = SkyCoord(ra = self.gaia_ra * u.deg, dec = self.gaia_dec * u.deg)
         idx, d2d, _ = c_gaia.match_to_catalog_sky(c_image)
@@ -97,17 +95,38 @@ class RefinedAlignment(ChipImage):
         image.
         """
         self.hdul[0].header.update(wcs_header)
-        self.hdul.writeto(self.file_name.split('.fits')[0] + '.refined.test.fits', overwrite=True)
+        self.hdul.writeto(self.file_name.split('.fits')[0] + '.refined.fits', overwrite=True)
+
+def refine_alignment(file_name: str, method: str) -> None:
+    """
+    Aligns an image using a given method. 
+
+    Methods available:
+        - Doing a cross match to gaia sources. 
+        - Uploading image to astrometry.net (To use this method you need to get an API 
+            the website https://nova.astrometry.net/ and run the command
+            import keyring 
+            keyring.set_password('astroquery:astrometry_net', 'IMACS', 'apikeyhere'))
+    """
+    align = RefinedAlignment(file_name)
+    if method == 'Gaia':
+        wcs_header = align.calculate_aligned_wcs()
+    elif method == 'Astrometry':
+        wcs_header = align.match_to_astrometry()
+    else:
+        raise ValueError('Method name is incorrect.')
+    align.write_wcs_header(wcs_header)
 
 if __name__ == '__main__':
-    api_key = 'juseocalskdsoavj'
+    API_KEY = 'juseocalskdsoavj'
     DIR = '/home/tlambert/Desktop/IMACS_analysis/IMACS_RAWDATA/ut211024_25/SCIENCE/'
     files = np.sort(glob.glob(f'{DIR}*.wcs.fits'))
     done_files = np.sort(glob.glob(f'{DIR}*wcs.refined.test.fits'))
-    done_files = [file.replace('.refined.test.','') for file in done_files]
+    done_files = [file.replace('refined.test.','') for file in done_files]
     to_do_files = np.setdiff1d(files, done_files)
 
     for file in track(to_do_files, description='Solving with astrometry.net'):
+        print(file)
         align = RefinedAlignment(file)
-        wcs_thing = align.match_to_astrometry(api_key=api_key)
+        wcs_thing = align.match_to_astrometry()
         align.write_wcs_header(wcs_thing)

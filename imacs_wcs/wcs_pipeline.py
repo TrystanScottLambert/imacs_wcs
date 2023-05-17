@@ -3,7 +3,7 @@ WCS pipeline for IMACS data. Module for performing all steps for
 adding wcs information to a directory of science IMACS data.
 """
 
-import os
+import keyring
 import glob
 from rich.progress import track
 import warnings
@@ -12,7 +12,7 @@ import numpy as np
 
 from imacs_wcs import add_wcs_to_fits
 from semi_auto_astrometry import do_semi_automation_of_every_chip
-from refine_wcs import align_image_to_gaia
+from refine_wcs import refine_alignment
 
 #Turn off logging and warnings used by other packages
 logger = logging.getLogger()
@@ -52,26 +52,13 @@ def correct_rough_wcs(files: list[str]) -> None:
     for file in track(files, description='Adding rough wcs information to files...'):
         add_wcs_to_fits(file)
 
-def refine_wcs(files: list[str]) -> None:
+def refine_wcs(files: list[str], method: str) -> None:
     """
     Refines the wcs based on matching to gaia.
     """
-    for file in track(files, description='Refining wcs information...'):
-        align_image_to_gaia(file)
+    for file in track(files, description=f'Refining wcs information using {method}...'):
+        refine_alignment(file, method)
 
-def clean_up_directory(directory: str) -> None:
-    """
-    Removes file extensions and intermittent files.
-    """
-
-    refined_files = np.sort(glob.glob(directory + '*refined.fits'))
-    for file in refined_files:
-        os.rename(file, file.replace('.wcs.wcs_aligned.refined', '.wcs_corrected.'))
-
-    os.system('mkdir temp')
-    os.system('mv *.wcs.* temp/')
-    os.system('mv temp/*wcs_corrected* ./')
-    os.system('rm -r temp/')
 
 
 def solve_wcs_for_directory(directory: str, clean: bool = True) -> None:
@@ -91,10 +78,13 @@ def solve_wcs_for_directory(directory: str, clean: bool = True) -> None:
     semi_auto_files = np.sort(glob.glob(directory + '*.wcs_aligned.fits'))
     refined_files = np.sort(glob.glob(directory + '*refined.fits'))
     to_do = get_unprocessed_files(semi_auto_files, refined_files)
-    refine_wcs(to_do)
+    refine_wcs(to_do, method = 'Gaia')
 
-    if clean:
-        clean_up_directory(directory)
+    gaia_files = np.sort(glob.glob(directory + '*wcs_aligned.refined.fits'))
+    astrometry_files = np.sort(glob.glob(directory + '.refined.refined.fits'))
+    to_do = get_unprocessed_files(gaia_files, astrometry_files)
+    refine_wcs(to_do, method='Astrometry')
+
 
 if __name__ == '__main__':
     DIR = '/home/tlambert/Desktop/IMACS_analysis/IMACS_RAWDATA/ut211024_25/SCIENCE/'
