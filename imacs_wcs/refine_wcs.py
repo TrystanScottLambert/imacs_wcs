@@ -26,6 +26,7 @@ class RefinedAlignment(ChipImage):
         super().__init__(file_name)
         self.wcs = WCS(self.header)
         self.ra, self.dec = self.wcs.pixel_to_world_values(self.data.shape[1]/2, self.data.shape[0]/2)
+        self.star_catalog = self.find_stars()
 
     def find_stars(self, fwhm: float = 3.0, sigma: float = 5.0) -> Table:
         """
@@ -45,7 +46,7 @@ class RefinedAlignment(ChipImage):
         """
         Determines the xy positions of the 2d data array.
         """
-        sources = self.find_stars()
+        sources = self.star_catalog
         x_pos, y_pos = np.array(sources['xcentroid']), np.array(sources['ycentroid'])
         return x_pos, y_pos
 
@@ -55,10 +56,30 @@ class RefinedAlignment(ChipImage):
         """
         ast = AstrometryNet()
         ast.api_key = keyring.get_password('astroquery:astrometry_net', 'IMACS')
+        sources = self.star_catalog
+        sources.sort('flux')
+        # Reverse to get descending order
+        sources.reverse()
+
+        image_width = self.data.shape[1]
+        image_height = self.data.shape[0]
+        wcs_header = ast.solve_from_source_list(
+            sources['xcentroid'], sources['ycentroid'],
+            image_width, image_height, solve_timeout=120,
+            center_ra = float(self.ra), center_dec = float(self.dec), radius = 0.2,
+            allow_commercial_use='n')
+        return wcs_header
+
+    '''def match_to_astrometry(self) -> fits.Header:
+        """
+        Uploads the catalog of detected stars to astrometry.net to determine wcs
+        """
+        ast = AstrometryNet()
+        ast.api_key = keyring.get_password('astroquery:astrometry_net', 'IMACS')
         wcs_header = ast.solve_from_image(
             self.file_name, force_image_upload=True, solve_timeout=900,
-            center_ra = float(self.ra), center_dec = float(self.dec), radius = 0.8)
-        return wcs_header
+            center_ra = float(self.ra), center_dec = float(self.dec), radius = 0.2, allow_commercial_use='n')
+        return wcs_header'''
 
     def match_to_gaia(self) -> tuple[np.array, SkyCoord]:
         """
@@ -86,8 +107,9 @@ class RefinedAlignment(ChipImage):
         works out the correct wcs based on the alignment to gaia.
         """
         pix_coords, sky_coords = self.match_to_gaia()
-        wcs = utils.fit_wcs_from_points(pix_coords, sky_coords)
-        return wcs.to_header()
+        wcs = utils.fit_wcs_from_points(pix_coords, sky_coords, sip_degree=5)
+        header = wcs.to_header(relax=True)
+        return header
 
     def write_wcs_header(self, wcs_header: fits.Header) -> None:
         """
@@ -118,7 +140,6 @@ def refine_alignment(file_name: str, method: str) -> None:
     align.write_wcs_header(wcs_header)
 
 if __name__ == '__main__':
-    API_KEY = 'juseocalskdsoavj'
     DIR = '/home/tlambert/Desktop/IMACS_analysis/IMACS_RAWDATA/ut211024_25/SCIENCE/'
     files = np.sort(glob.glob(f'{DIR}*.wcs.fits'))
     done_files = np.sort(glob.glob(f'{DIR}*wcs.refined.test.fits'))
