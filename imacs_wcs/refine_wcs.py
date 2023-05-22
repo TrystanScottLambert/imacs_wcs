@@ -15,6 +15,7 @@ from astropy.wcs import WCS
 from astropy.stats import sigma_clipped_stats
 from photutils.detection import DAOStarFinder
 from astroquery.astrometry_net import AstrometryNet
+from sip_tpv import sip_to_pv
 
 from manual_astrometry import ChipImage
 
@@ -107,8 +108,20 @@ class RefinedAlignment(ChipImage):
         works out the correct wcs based on the alignment to gaia.
         """
         pix_coords, sky_coords = self.match_to_gaia()
-        wcs = utils.fit_wcs_from_points(pix_coords, sky_coords, sip_degree=5)
+        wcs = utils.fit_wcs_from_points(pix_coords, sky_coords, sip_degree=7)
         header = wcs.to_header(relax=True)
+        header['CD1_1'] = header['PC1_1']
+        header['CD1_2'] = header['PC1_2']
+        header['CD2_1'] = header['PC2_1']
+        header['CD2_2'] = header['PC2_2']
+
+        del header['PC1_1']
+        del header['PC1_2']
+        del header['PC2_1']
+        del header['PC2_2']
+        del header['CDELT1']
+        del header['CDELT2']
+        sip_to_pv(header)
         return header
 
     def write_wcs_header(self, wcs_header: fits.Header) -> None:
@@ -117,6 +130,13 @@ class RefinedAlignment(ChipImage):
         image.
         """
         self.hdul[0].header.update(wcs_header)
+        del self.hdul[0].header['PC1_1']
+        del self.hdul[0].header['PC1_2']
+        del self.hdul[0].header['PC2_1']
+        del self.hdul[0].header['PC2_2']
+        del self.hdul[0].header['CDELT1']
+        del self.hdul[0].header['CDELT2']
+
         self.hdul.writeto(self.file_name.split('.fits')[0] + '.refined.fits', overwrite=True)
 
 def refine_alignment(file_name: str, method: str) -> None:
